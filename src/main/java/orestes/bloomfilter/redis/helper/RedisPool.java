@@ -1,12 +1,5 @@
 package orestes.bloomfilter.redis.helper;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.Pipeline;
-import redis.clients.jedis.Response;
-import redis.clients.util.Pool;
-
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -17,10 +10,20 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.Pipeline;
+import redis.clients.jedis.Response;
+import redis.clients.jedis.util.Pool;
+
 /**
- * Encapsulates a Connection Pool and offers convenience methods for safe access through Java 8 Lambdas.
+ * Encapsulates a Connection Pool and offers convenience methods for safe access through Java 8
+ * Lambdas.
  */
 public class RedisPool {
+
     private static final Logger LOG = LoggerFactory.getLogger(RedisPool.class);
 
     private final Pool<Jedis> pool;
@@ -31,6 +34,7 @@ public class RedisPool {
 
     /**
      * Creates a builder for a standalone RedisPool
+     * 
      * @return A builder for a standalone redisPool
      */
     public static final RedisStandalonePoolBuilder builder() {
@@ -39,6 +43,7 @@ public class RedisPool {
 
     /**
      * Creates a builder for a sentinel RedisPool
+     * 
      * @return A builder for a sentinel redisPool
      */
     public static final RedisSentinelPoolBuilder sentinelBuilder() {
@@ -134,20 +139,20 @@ public class RedisPool {
     public Clock getClock() {
         List<String> time = this.safelyReturn(Jedis::time);
         Instant local = Instant.now();
-        //Format: [0]: unix ts [1]: microseconds
+        // Format: [0]: unix ts [1]: microseconds
         Instant redis = Instant.ofEpochSecond(Long.valueOf(time.get(0)), Long.valueOf(time.get(1)) * 1000);
         return Clock.offset(Clock.systemDefaultZone(), Duration.between(local, redis));
     }
 
 
     /**
-     * Start an automatically reconnecting Thread with a dedicated connection to Redis (e.g. for PubSub or blocking
-     * pops)
+     * Start an automatically reconnecting Thread with a dedicated connection to Redis (e.g. for PubSub
+     * or blocking pops)
      *
-     * @param redisHost     host
-     * @param redisPort     port
+     * @param redisHost host
+     * @param redisPort port
      * @param whenConnected executed when the connections is active
-     * @param abort         lambda that allows to abort processing when an error occurs
+     * @param abort lambda that allows to abort processing when an error occurs
      * @return the started thread
      */
     public static Thread startThread(String redisHost, int redisPort, Consumer<Jedis> whenConnected, Function<Exception, Boolean> abort) {
@@ -155,7 +160,7 @@ public class RedisPool {
             boolean connected = false;
             while (!connected && !Thread.currentThread().isInterrupted()) {
                 try (Jedis jedis = new Jedis(redisHost, redisPort)) {
-                    //pubsub has its own Redis connection
+                    // pubsub has its own Redis connection
                     jedis.ping();
                     connected = true;
                     LOG.info("PubSub Redis connection established.");
@@ -167,7 +172,7 @@ public class RedisPool {
                         break;
                     } else {
                         LOG.warn("PubSub Redis connection failed with an exception:", e);
-                        //Rate Limit to 4 reconnects per second
+                        // Rate Limit to 4 reconnects per second
                         try {
                             Thread.sleep(250);
                         } catch (InterruptedException e1) {

@@ -1,19 +1,23 @@
 package orestes.bloomfilter.redis;
 
-import orestes.bloomfilter.redis.helper.RedisPool;
-import redis.clients.jedis.PipelineBase;
-import redis.clients.util.SafeEncoder;
-
 import java.util.BitSet;
 import java.util.List;
 import java.util.stream.Stream;
 
+import orestes.bloomfilter.redis.helper.RedisPool;
+import redis.clients.jedis.PipelineBase;
+import redis.clients.jedis.util.SafeEncoder;
+
 /**
- * A persistent BitSet backed by Redis. Not all methods of the superclass are implemented. If needed they can be used
- * converting the RedisBitSet to a regular BitSet by calling {@link #asBitSet()}. <br> <br> External transactions or
- * pipeline can be propagated for use by modifying methods (e.g. {@link #set(int)}).
+ * A persistent BitSet backed by Redis. Not all methods of the superclass are implemented. If needed
+ * they can be used converting the RedisBitSet to a regular BitSet by calling {@link #asBitSet()}.
+ * <br>
+ * <br>
+ * External transactions or pipeline can be propagated for use by modifying methods (e.g.
+ * {@link #set(int)}).
  */
 public class RedisBitSet extends BitSet {
+
     private final RedisPool pool;
     private String name;
     private int size;
@@ -38,7 +42,8 @@ public class RedisBitSet extends BitSet {
     }
 
     /**
-     * Fetches the values at the given index positions in a multi transaction. This guarantees a consistent view.
+     * Fetches the values at the given index positions in a multi transaction. This guarantees a
+     * consistent view.
      *
      * @param indexes the index positions to query
      * @return an array containing the values at the given index positions
@@ -65,9 +70,9 @@ public class RedisBitSet extends BitSet {
     /**
      * Performs the normal {@link #set(int, boolean)} operation using the given pipeline.
      *
-     * @param p        the propagated pipeline
+     * @param p the propagated pipeline
      * @param bitIndex a bit index
-     * @param value    a boolean value to set
+     * @param value a boolean value to set
      */
     public void set(PipelineBase p, int bitIndex, boolean value) {
         p.setbit(name, bitIndex, value);
@@ -111,7 +116,7 @@ public class RedisBitSet extends BitSet {
         return pool.allowingSlaves().safelyReturn(jedis -> {
             byte[] bytes = jedis.get(SafeEncoder.encode(name));
             if (bytes == null) {
-                //prevent null values
+                // prevent null values
                 bytes = new byte[(int) Math.ceil(size / 8)];
             }
             return bytes;
@@ -188,13 +193,14 @@ public class RedisBitSet extends BitSet {
      */
     public boolean setAll(int... positions) {
         List<Object> results = pool.transactionallyDo(p -> {
-            for (int position : positions)
+            for (int position : positions) {
                 p.setbit(name, position, true);
+            }
         });
         return results.stream().anyMatch(b -> !(Boolean) b);
     }
 
-    //Copied from: https://github.com/xetorthio/jedis/issues/301
+    // Copied from: https://github.com/xetorthio/jedis/issues/301
     public static BitSet fromByteArrayReverse(byte[] bytes) {
         BitSet bits = new BitSet();
         for (int i = 0; i < bytes.length * 8; i++) {
@@ -205,7 +211,7 @@ public class RedisBitSet extends BitSet {
         return bits;
     }
 
-    //Copied from: https://github.com/xetorthio/jedis/issues/301
+    // Copied from: https://github.com/xetorthio/jedis/issues/301
     public static byte[] toByteArrayReverse(BitSet bits) {
         byte[] bytes = new byte[(bits.length() + 7) / 8];
         for (int i = 0; i < bits.length(); i++) {
@@ -219,8 +225,9 @@ public class RedisBitSet extends BitSet {
 
     @Override
     public boolean equals(Object obj) {
-        if (obj instanceof RedisBitSet)
+        if (obj instanceof RedisBitSet) {
             obj = ((RedisBitSet) obj).asBitSet();
+        }
         return asBitSet().equals(obj);
     }
 }

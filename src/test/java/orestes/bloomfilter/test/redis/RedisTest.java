@@ -1,15 +1,21 @@
 package orestes.bloomfilter.test.redis;
 
-import orestes.bloomfilter.test.MemoryBFTest;
-import org.junit.Ignore;
-import org.junit.Test;
-import redis.clients.jedis.*;
-import redis.clients.util.SafeEncoder;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+
+import org.junit.Ignore;
+import org.junit.Test;
+
+import orestes.bloomfilter.test.MemoryBFTest;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisShardInfo;
+import redis.clients.jedis.Pipeline;
+import redis.clients.jedis.Response;
+import redis.clients.jedis.ShardedJedis;
+import redis.clients.jedis.Transaction;
+import redis.clients.jedis.util.SafeEncoder;
 
 /**
  * A few test to play around with the Jedis client library for Redis
@@ -26,7 +32,7 @@ public class RedisTest {
         Pipeline p = jedis.pipelined();
         p.multi();
         for (int i = 0; i < 10000; i++) {
-            p.setbit("test", 1, true); //or any other call
+            p.setbit("test", 1, true); // or any other call
         }
         Response<List<Object>> exec = p.exec();
         p.sync();
@@ -48,11 +54,12 @@ public class RedisTest {
         System.out.println(resp.get());
 
         t = jedis.multi();
-        int[] positions = new int[]{1, 2, 3};
-        for (int position : positions)
+        int[] positions = new int[] {1, 2, 3};
+        for (int position : positions) {
             t.getbit("bla", position);
+        }
         for (Object obj : t.exec()) {
-            System.out.println("Bit : " + (Boolean) obj);
+            System.out.println("Bit : " + obj);
         }
 
         jedis.set("meinint", Integer.toString(3));
@@ -119,26 +126,27 @@ public class RedisTest {
         for (int i = 0; i < size / 10; i++) {
             jedis.watch("testblob");
             t = jedis.multi();
-            //falsePositiveProbability = jedis.pipelined();
+            // falsePositiveProbability = jedis.pipelined();
             for (int j = 0; j < 10; j++) {
                 t.setbit("testblob", (int) (Math.random() * size), true);
             }
             t.exec();
-            //falsePositiveProbability.sync();
+            // falsePositiveProbability.sync();
         }
         long end_add = System.currentTimeMillis();
         MemoryBFTest.printStat(start_add, end_add, size);
 
 
-        //Pipelining bug if watch is after multi
+        // Pipelining bug if watch is after multi
         Pipeline pipe = jedis.pipelined();
         pipe.watch("myKey");
         pipe.multi();
         pipe.set("myKey", "myVal");
         Response<List<Object>> result = pipe.exec();
         pipe.sync();
-        for (Object o : result.get())
+        for (Object o : result.get()) {
             System.out.println(o);
+        }
 
         int ops = 1000;
         begin = System.currentTimeMillis();
@@ -162,24 +170,24 @@ public class RedisTest {
     @Ignore
     @Test
     public void lua() {
-        //No more Lua Scripting -> too slow
-        /*Jedis jedis = jedis();
-		String script = jedis.scriptLoad("return false");
-		System.out.println(jedis.evalsha(script));
-		Object result = jedis.eval("return redis.call('incrby',KEYS[1],ARGV[1])", 1, "nonexistent", "10");
-		System.out.println(result);
-		
-		jedis.del("testcounts");
-		jedis.del("testbloom");
-		result = jedis.eval(CBloomFilterRedisBits.SETANDINCR, 2, "testcounts", "testbloom", "4", "2", "100", "105");
-		System.out.println("Incremented: " + result);
-		System.out.println("Least Significant Count Bit: " + jedis.getbit("testcounts", 4*101-1));
-		System.out.println("Bit in Bloom-Array: " + jedis.getbit("testbloom", 100));
-		
-		result = jedis.eval(CBloomFilterRedisBits.SETANDDECR, 2, "testcounts","testbloom", "4", "3", "100", "105", "110");
-		System.out.println("NonZero: " + result);
-		System.out.println("Least Significant Count Bit: " + jedis.getbit("testcounts", 4*101-1));
-		System.out.println("Bit in Bloom-Array: " + jedis.getbit("testbloom", 100));*/
+        // No more Lua Scripting -> too slow
+        /*
+         * Jedis jedis = jedis(); String script = jedis.scriptLoad("return false");
+         * System.out.println(jedis.evalsha(script)); Object result =
+         * jedis.eval("return redis.call('incrby',KEYS[1],ARGV[1])", 1, "nonexistent", "10");
+         * System.out.println(result);
+         * 
+         * jedis.del("testcounts"); jedis.del("testbloom"); result =
+         * jedis.eval(CBloomFilterRedisBits.SETANDINCR, 2, "testcounts", "testbloom", "4", "2", "100",
+         * "105"); System.out.println("Incremented: " + result);
+         * System.out.println("Least Significant Count Bit: " + jedis.getbit("testcounts", 4*101-1));
+         * System.out.println("Bit in Bloom-Array: " + jedis.getbit("testbloom", 100));
+         * 
+         * result = jedis.eval(CBloomFilterRedisBits.SETANDDECR, 2, "testcounts","testbloom", "4", "3",
+         * "100", "105", "110"); System.out.println("NonZero: " + result);
+         * System.out.println("Least Significant Count Bit: " + jedis.getbit("testcounts", 4*101-1));
+         * System.out.println("Bit in Bloom-Array: " + jedis.getbit("testbloom", 100));
+         */
 
 
     }
